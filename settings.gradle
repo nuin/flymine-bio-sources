@@ -8,6 +8,7 @@ include ':bio-source-affy-probes',
 ':bio-source-drosophila-homology',
 ':bio-source-fly-anatomy-ontology',
 ':bio-source-flyatlas',
+':bio-source-flybase-aberrations',
 ':bio-source-flybase-alleles',
 ':bio-source-flybase-expression',
 ':bio-source-fly-development-ontology',
@@ -28,6 +29,7 @@ project(':bio-source-drosdel-gff').projectDir = new File(settingsDir, './drosdel
 project(':bio-source-drosophila-homology').projectDir = new File(settingsDir, './drosophila-homology')
 project(':bio-source-fly-anatomy-ontology').projectDir = new File(settingsDir, './fly-anatomy-ontology')
 project(':bio-source-flyatlas').projectDir = new File(settingsDir, './flyatlas')
+project(':bio-source-flybase-aberrations').projectDir = new File(settingsDir, './flybase-aberrations')
 project(':bio-source-flybase-alleles').projectDir = new File(settingsDir, './flybase-alleles')
 project(':bio-source-flybase-expression').projectDir = new File(settingsDir, './flybase-expression')
 project(':bio-source-fly-development-ontology').projectDir = new File(settingsDir, './fly-development-ontology')
