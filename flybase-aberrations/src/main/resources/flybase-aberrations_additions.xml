@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  Schema additions for flybase-aberrations (FBab/FBba).
+
+  Aberration and Balancer are subclasses of Allele.
+
+  The genomic-model Allele is merged from two declarations (verified 2026-06-01):
+    - flymine-global_additions.xml:      Allele extends SequenceCollection
+        attribute alleleClass; references gene (reverse=alleles);
+        collections mutagens, stocks (reverse=alleles), phenotypeAnnotations, doAnnotation
+    - flybase-alleles_additions.xml:     Allele extends SequenceFeature
+        adds collection doAnnotation (redundant — already in global)
+
+  The merged Allele therefore extends both SequenceCollection and SequenceFeature
+  (InterMine permits multi-extends) and inherits from BioEntity:
+    primaryIdentifier, symbol, name, organism, synonyms, crossReferences, dataSets.
+
+  Aberration and Balancer inherit all of the above. Do NOT redeclare any of them
+  in this file.
+-->
+<classes>
+
+  <class name="Aberration" extends="Allele" is-interface="true">
+    <attribute name="aberrationType" type="java.lang.String"/>
+    <collection name="deletedGenes"    referenced-type="Gene"/>
+    <collection name="duplicatedGenes" referenced-type="Gene"/>
+    <collection name="breakpoints"     referenced-type="Location"/>
+  </class>
+
+  <class name="Balancer" extends="Allele" is-interface="true">
+    <collection name="composedOfAberrations" referenced-type="Aberration"/>
+    <attribute  name="balancedChromosome"    type="java.lang.String"/>
+  </class>
+
+  <class name="Gene" is-interface="true">
+    <collection name="deletedByAberrations"
+                referenced-type="Aberration"
+                reverse-reference="deletedGenes"/>
+    <collection name="duplicatedByAberrations"
+                referenced-type="Aberration"
+                reverse-reference="duplicatedGenes"/>
+  </class>
+
+</classes>
