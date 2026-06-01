@@ -113,8 +113,50 @@ public class FlybaseAberrationsConverter extends BioFileConverter
         }
     }
 
+    /**
+     * Parse aberration_experimental_gene_del_dup_data_*.tsv. Each row maps a
+     * gene (FBgn) to an aberration (FBab) with a type column indicating
+     * whether the gene is deleted/disrupted, duplicated, or negative (not
+     * deleted / not duplicated). Negatives are skipped. The aberration must
+     * already exist in {@link #aberrationsById} (created by processSynonyms);
+     * unknown FBab ids are skipped silently. Gene items are created on demand
+     * and stored at close().
+     */
     void processDelDup(Reader reader) throws Exception {
-        throw new UnsupportedOperationException("not yet implemented");
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            String[] cols = line.split("\\t", -1);
+            if (cols.length < 5) {
+                continue;
+            }
+            String fbgn = cols[0];
+            String type = cols[2].toLowerCase();
+            String fbab = cols[3];
+            // skip negative rows ("not deleted", "not duplicated")
+            if (type.startsWith("not ")) {
+                continue;
+            }
+            Item aberration = aberrationsById.get(fbab);
+            if (aberration == null) {
+                continue;
+            }
+            Item gene = genesByFbgn.get(fbgn);
+            if (gene == null) {
+                gene = createItem("Gene");
+                gene.setAttribute("primaryIdentifier", fbgn);
+                gene.setReference("organism", getOrganism());
+                genesByFbgn.put(fbgn, gene);
+            }
+            if (type.contains("deleted") || type.contains("disrupted")) {
+                aberration.addToCollection("deletedGenes", gene);
+            } else if (type.contains("duplicated")) {
+                aberration.addToCollection("duplicatedGenes", gene);
+            }
+        }
     }
 
     void processCuratedBalancers(Reader reader) throws Exception {

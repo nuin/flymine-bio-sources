@@ -67,4 +67,50 @@ public class FlybaseAberrationsConverterTest extends ItemsTestCase
         assertEquals(5, aberrations);
         assertEquals(2, balancers);
     }
+
+    /**
+     * Task 9 — del/dup file wires deletedGenes / duplicatedGenes;
+     * skips "not deleted" / "not duplicated" negative rows.
+     */
+    public void testDelDupSkipsNegativesAndWiresGenes() throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        // first pass: synonyms (creates the Aberration items keyed by FBab)
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        // second pass: del/dup
+        c.setCurrentFile(new File("aberration_del_dup_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/aberration_del_dup_test.tsv")));
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        // Find FBab0001001 — should have 2 deletedGenes (rows 1,2) and 0 duplicated
+        Item ab1 = items.stream()
+            .filter(i -> "Aberration".equals(i.getClassName()))
+            .filter(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBab0001001".equals(a.getValue())))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("FBab0001001 not stored"));
+
+        long deletedCount = ab1.getCollections().stream()
+            .filter(c2 -> "deletedGenes".equals(c2.getName()))
+            .mapToLong(c2 -> c2.getRefIds().size()).sum();
+        assertEquals(2, deletedCount);
+
+        long duplicatedCount = ab1.getCollections().stream()
+            .filter(c2 -> "duplicatedGenes".equals(c2.getName()))
+            .mapToLong(c2 -> c2.getRefIds().size()).sum();
+        assertEquals(0, duplicatedCount);
+
+        // The 2 "not deleted"/"not duplicated" rows should NOT create their
+        // gene items (geneD, geneE). Total Gene items = 3 (geneA, B, C).
+        long genes = items.stream()
+            .filter(i -> "Gene".equals(i.getClassName())).count();
+        assertEquals(3, genes);
+    }
 }
