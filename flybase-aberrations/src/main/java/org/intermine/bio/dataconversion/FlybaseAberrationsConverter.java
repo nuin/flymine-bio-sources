@@ -10,6 +10,7 @@ package org.intermine.bio.dataconversion;
  *
  */
 
+import java.io.BufferedReader;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,8 +71,46 @@ public class FlybaseAberrationsConverter extends BioFileConverter
         // unknown files are silently skipped
     }
 
+    /**
+     * Parse fb_synonym_*.tsv. Rows whose primary id starts with FBab create
+     * an Aberration item; rows starting FBba create a Balancer item.
+     * Items are stashed in maps and stored at close() so subsequent
+     * passes can attach collections.
+     */
     void processSynonyms(Reader reader) throws Exception {
-        throw new UnsupportedOperationException("not yet implemented");
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            String[] cols = line.split("\\t", -1);
+            if (cols.length < 3) {
+                continue;
+            }
+            String fbId = cols[0];
+            String symbol = cols[2];
+            if (fbId.startsWith("FBab")) {
+                Item ab = createItem("Aberration");
+                ab.setAttribute("primaryIdentifier", fbId);
+                if (!symbol.isEmpty()) {
+                    ab.setAttribute("symbol", symbol);
+                    ab.setAttribute("aberrationType", aberrationTypeFromSymbol(symbol));
+                } else {
+                    ab.setAttribute("aberrationType", "other");
+                }
+                ab.setReference("organism", getOrganism());
+                aberrationsById.put(fbId, ab);
+            } else if (fbId.startsWith("FBba")) {
+                Item ba = createItem("Balancer");
+                ba.setAttribute("primaryIdentifier", fbId);
+                if (!symbol.isEmpty()) {
+                    ba.setAttribute("symbol", symbol);
+                }
+                ba.setReference("organism", getOrganism());
+                balancersById.put(fbId, ba);
+            }
+        }
     }
 
     void processDelDup(Reader reader) throws Exception {
@@ -111,5 +150,26 @@ public class FlybaseAberrationsConverter extends BioFileConverter
             store(organism);
         }
         return organism;
+    }
+
+    /**
+     * Deferred store: items are accumulated during process() across multiple
+     * input files so that del/dup and curated balancer collections can be
+     * attached before the items hit the ItemWriter. Stored in
+     * Aberration -> Balancer -> Gene order; Gene items are created lazily by
+     * processDelDup.
+     */
+    @Override
+    public void close() throws Exception {
+        for (Item ab : aberrationsById.values()) {
+            store(ab);
+        }
+        for (Item ba : balancersById.values()) {
+            store(ba);
+        }
+        for (Item g : genesByFbgn.values()) {
+            store(g);
+        }
+        super.close();
     }
 }
