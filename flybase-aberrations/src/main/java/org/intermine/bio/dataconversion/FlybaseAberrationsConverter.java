@@ -159,8 +159,42 @@ public class FlybaseAberrationsConverter extends BioFileConverter
         }
     }
 
+    /**
+     * Parse the curated fbba_to_fbab*.tsv. For each row, find the Balancer
+     * (created by processSynonyms) and attach each pipe-separated FBab as an
+     * Aberration in its composedOfAberrations collection. Tolerates balancers
+     * absent from synonyms (skipped) and rows with empty composition
+     * (Balancer remains in place with no composedOfAberrations).
+     */
     void processCuratedBalancers(Reader reader) throws Exception {
-        throw new UnsupportedOperationException("not yet implemented");
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            String[] cols = line.split("\\t", -1);
+            if (cols.length < 3) {
+                continue;
+            }
+            String fbba = cols[0];
+            String fbabIds = cols[2];
+            Item balancer = balancersById.get(fbba);
+            if (balancer == null || fbabIds.isEmpty()) {
+                continue;
+            }
+            for (String fbab : fbabIds.split("\\|")) {
+                String trimmed = fbab.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                Item aberration = aberrationsById.get(trimmed);
+                if (aberration == null) {
+                    continue;
+                }
+                balancer.addToCollection("composedOfAberrations", aberration);
+            }
+        }
     }
 
     /**

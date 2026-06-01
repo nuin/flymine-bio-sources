@@ -113,4 +113,46 @@ public class FlybaseAberrationsConverterTest extends ItemsTestCase
             .filter(i -> "Gene".equals(i.getClassName())).count();
         assertEquals(3, genes);
     }
+
+    /**
+     * Task 10 — curated fbba_to_fbab table wires composedOfAberrations;
+     * balancers with empty composition still exist as Balancer items.
+     */
+    public void testCuratedBalancersComposeAberrationsAndTolerateEmpty()
+            throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        c.setCurrentFile(new File("fbba_to_fbab_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fbba_to_fbab_test.tsv")));
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        // FBba0001001 has 2 fbab_ids -> expect 2 in composedOfAberrations
+        Item bal1 = items.stream()
+            .filter(i -> "Balancer".equals(i.getClassName()))
+            .filter(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBba0001001".equals(a.getValue())))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("FBba0001001 not stored"));
+        long composedCount = bal1.getCollections().stream()
+            .filter(col -> "composedOfAberrations".equals(col.getName()))
+            .mapToLong(col -> col.getRefIds().size()).sum();
+        assertEquals(2, composedCount);
+
+        // FBba0001002 has empty fbab_ids — Balancer must still exist
+        boolean bal2Exists = items.stream()
+            .filter(i -> "Balancer".equals(i.getClassName()))
+            .anyMatch(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBba0001002".equals(a.getValue())));
+        assertTrue("FBba0001002 (empty composition) should still be stored",
+                   bal2Exists);
+    }
 }
