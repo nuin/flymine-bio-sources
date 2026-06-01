@@ -1,0 +1,8 @@
+##primary_FBid	organism_abbreviation	current_symbol	current_fullname	fullname_synonym(s)	symbol_synonym(s)
+FBab0001001	Dmel	Df(2R)test1			Df_synA
+FBab0001002	Dmel	Dp(1;2)test2
+FBab0001003	Dmel	In(2LR)test3
+FBab0001004	Dmel	T(2;3)test4
+FBab0001005	Dmel	Mystery(test5)
+FBba0001001	Dmel	TestBal1	Test Balancer 1
+FBba0001002	Dmel	TestBal2

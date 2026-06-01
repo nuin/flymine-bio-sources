@@ -1,0 +1,6 @@
+##gene_id	gene_symbol	type	aberration_id	aberration_symbol	references
+FBgn0000001	geneA	completely deleted (molecular)	FBab0001001	Df(2R)test1	FBrf0000001
+FBgn0000002	geneB	partially deleted/disrupted (complementation)	FBab0001001	Df(2R)test1
+FBgn0000003	geneC	completely duplicated (molecular)	FBab0001002	Dp(1;2)test2
+FBgn0000004	geneD	not deleted	FBab0001001	Df(2R)test1
+FBgn0000005	geneE	not duplicated	FBab0001002	Dp(1;2)test2

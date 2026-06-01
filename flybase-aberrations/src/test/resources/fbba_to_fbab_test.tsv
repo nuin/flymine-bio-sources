@@ -1,0 +1,3 @@
+#fbba_id	fbba_symbol	fbab_ids	note
+FBba0001001	TestBal1	FBab0001003|FBab0001004	composed of test3 + test4
+FBba0001002	TestBal2		empty composition tolerated
