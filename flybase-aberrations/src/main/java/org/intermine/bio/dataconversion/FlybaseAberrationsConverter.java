@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.intermine.dataconversion.ItemWriter;
 import org.intermine.metadata.Model;
 import org.intermine.objectstore.ObjectStoreException;
@@ -29,10 +30,23 @@ import org.intermine.xml.full.Item;
  *   - aberration_experimental_gene_del_dup_data_*.tsv   gene del/dup wiring
  *   - fbba_to_fbab*.tsv                                 curated balancer composition
  *
- * @author new_flymine session, 2026-06-01
+ * Design notes (revised 2026-06-02 after AllianceMineDev integrate found empty
+ * collection tables):
+ *   - File processing order is non-deterministic. All three parsers must be
+ *     order-tolerant: a delDup or curated-balancer row that arrives before the
+ *     corresponding synonyms row must still create the stub Aberration/Balancer
+ *     item. processSynonyms enriches existing items rather than overwriting.
+ *   - Any .gz companion file is skipped — if both fb_*.tsv and fb_*.tsv.gz are
+ *     in src.data.dir (operator left the gz around after gunzip), the
+ *     decompressed .tsv is the source of truth.
+ *
+ * @author new_flymine session, 2026-06-01 (bug fix 2026-06-02)
  */
 public class FlybaseAberrationsConverter extends BioFileConverter
 {
+    private static final Logger LOG =
+        Logger.getLogger(FlybaseAberrationsConverter.class);
+
     private static final String DATASET_TITLE = "FlyBase aberrations and balancers";
     private static final String DATA_SOURCE_NAME = "FlyBase";
     private static final String DMEL_TAXON = "7227";
@@ -55,31 +69,94 @@ public class FlybaseAberrationsConverter extends BioFileConverter
     }
 
     /**
-     * Dispatch by input filename.
+     * Dispatch by input filename. Skips any *.gz companions so a leftover
+     * compressed file does not double-process content as garbage.
      * @param reader reader over the current input file
      */
     @Override
     public void process(Reader reader) throws Exception {
         String name = getCurrentFile().getName();
+        if (name.endsWith(".gz")) {
+            LOG.info("flybase-aberrations: skipping gz companion " + name);
+            return;
+        }
+        LOG.info("flybase-aberrations: processing " + name
+                 + " (state before: aberrations=" + aberrationsById.size()
+                 + " balancers=" + balancersById.size()
+                 + " genes=" + genesByFbgn.size() + ")");
         if (name.startsWith("fb_synonym")) {
             processSynonyms(reader);
         } else if (name.startsWith("aberration_experimental_gene_del_dup_data")) {
             processDelDup(reader);
         } else if (name.startsWith("fbba_to_fbab")) {
             processCuratedBalancers(reader);
+        } else {
+            LOG.info("flybase-aberrations: unrecognised filename " + name + " — skipping");
         }
-        // unknown files are silently skipped
+        LOG.info("flybase-aberrations: after " + name
+                 + ": aberrations=" + aberrationsById.size()
+                 + " balancers=" + balancersById.size()
+                 + " genes=" + genesByFbgn.size());
     }
 
     /**
-     * Parse fb_synonym_*.tsv. Rows whose primary id starts with FBab create
-     * an Aberration item; rows starting FBba create a Balancer item.
-     * Items are stashed in maps and stored at close() so subsequent
-     * passes can attach collections.
+     * Get the Aberration item for the given FBab; create a stub (primaryIdentifier
+     * + organism only) if not yet seen. The stub is enriched later by
+     * processSynonyms with symbol + aberrationType.
+     */
+    private Item getOrCreateAberration(String fbab) throws ObjectStoreException {
+        Item ab = aberrationsById.get(fbab);
+        if (ab == null) {
+            ab = createItem("Aberration");
+            ab.setAttribute("primaryIdentifier", fbab);
+            ab.setReference("organism", getOrganism());
+            aberrationsById.put(fbab, ab);
+        }
+        return ab;
+    }
+
+    /**
+     * Get the Balancer item for the given FBba; create a stub if not yet seen.
+     */
+    private Item getOrCreateBalancer(String fbba) throws ObjectStoreException {
+        Item ba = balancersById.get(fbba);
+        if (ba == null) {
+            ba = createItem("Balancer");
+            ba.setAttribute("primaryIdentifier", fbba);
+            ba.setReference("organism", getOrganism());
+            balancersById.put(fbba, ba);
+        }
+        return ba;
+    }
+
+    /**
+     * Get the Gene item for the given FBgn; create a stub if not yet seen.
+     * The InterMine loader merges by primaryIdentifier (per
+     * flybase-aberrations_keys.properties) so a stub created here will be
+     * merged with the chado-db gene of the same FBgn at load time.
+     */
+    private Item getOrCreateGene(String fbgn) throws ObjectStoreException {
+        Item g = genesByFbgn.get(fbgn);
+        if (g == null) {
+            g = createItem("Gene");
+            g.setAttribute("primaryIdentifier", fbgn);
+            g.setReference("organism", getOrganism());
+            genesByFbgn.put(fbgn, g);
+        }
+        return g;
+    }
+
+    /**
+     * Parse fb_synonym_*.tsv. Enriches (or creates) Aberration / Balancer items
+     * with symbol + (for Aberration) aberrationType. Order-tolerant: if an
+     * item already exists from a prior del/dup or curated-balancer pass, this
+     * sets the missing attributes without losing already-attached collections.
      */
     void processSynonyms(Reader reader) throws Exception {
         BufferedReader br = new BufferedReader(reader);
         String line;
+        int abCount = 0;
+        int baCount = 0;
         while ((line = br.readLine()) != null) {
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
@@ -91,40 +168,42 @@ public class FlybaseAberrationsConverter extends BioFileConverter
             String fbId = cols[0];
             String symbol = cols[2];
             if (fbId.startsWith("FBab")) {
-                Item ab = createItem("Aberration");
-                ab.setAttribute("primaryIdentifier", fbId);
+                Item ab = getOrCreateAberration(fbId);
                 if (!symbol.isEmpty()) {
-                    ab.setAttribute("symbol", symbol);
-                    ab.setAttribute("aberrationType", aberrationTypeFromSymbol(symbol));
-                } else {
+                    if (ab.getAttribute("symbol") == null) {
+                        ab.setAttribute("symbol", symbol);
+                    }
+                    if (ab.getAttribute("aberrationType") == null) {
+                        ab.setAttribute("aberrationType", aberrationTypeFromSymbol(symbol));
+                    }
+                } else if (ab.getAttribute("aberrationType") == null) {
                     ab.setAttribute("aberrationType", "other");
                 }
-                ab.setReference("organism", getOrganism());
-                aberrationsById.put(fbId, ab);
+                abCount++;
             } else if (fbId.startsWith("FBba")) {
-                Item ba = createItem("Balancer");
-                ba.setAttribute("primaryIdentifier", fbId);
-                if (!symbol.isEmpty()) {
+                Item ba = getOrCreateBalancer(fbId);
+                if (!symbol.isEmpty() && ba.getAttribute("symbol") == null) {
                     ba.setAttribute("symbol", symbol);
                 }
-                ba.setReference("organism", getOrganism());
-                balancersById.put(fbId, ba);
+                baCount++;
             }
         }
+        LOG.info("flybase-aberrations: processSynonyms rows: FBab=" + abCount
+                 + " FBba=" + baCount);
     }
 
     /**
-     * Parse aberration_experimental_gene_del_dup_data_*.tsv. Each row maps a
-     * gene (FBgn) to an aberration (FBab) with a type column indicating
-     * whether the gene is deleted/disrupted, duplicated, or negative (not
-     * deleted / not duplicated). Negatives are skipped. The aberration must
-     * already exist in {@link #aberrationsById} (created by processSynonyms);
-     * unknown FBab ids are skipped silently. Gene items are created on demand
-     * and stored at close().
+     * Parse aberration_experimental_gene_del_dup_data_*.tsv. Skips "not deleted"
+     * / "not duplicated" negative rows. Order-tolerant — creates stub Aberration
+     * + Gene items if not yet seen; processSynonyms / chado-db will merge or
+     * enrich them.
      */
     void processDelDup(Reader reader) throws Exception {
         BufferedReader br = new BufferedReader(reader);
         String line;
+        int delCount = 0;
+        int dupCount = 0;
+        int skipped = 0;
         while ((line = br.readLine()) != null) {
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
@@ -136,39 +215,33 @@ public class FlybaseAberrationsConverter extends BioFileConverter
             String fbgn = cols[0];
             String type = cols[2].toLowerCase();
             String fbab = cols[3];
-            // skip negative rows ("not deleted", "not duplicated")
             if (type.startsWith("not ")) {
+                skipped++;
                 continue;
             }
-            Item aberration = aberrationsById.get(fbab);
-            if (aberration == null) {
-                continue;
-            }
-            Item gene = genesByFbgn.get(fbgn);
-            if (gene == null) {
-                gene = createItem("Gene");
-                gene.setAttribute("primaryIdentifier", fbgn);
-                gene.setReference("organism", getOrganism());
-                genesByFbgn.put(fbgn, gene);
-            }
+            Item aberration = getOrCreateAberration(fbab);
+            Item gene = getOrCreateGene(fbgn);
             if (type.contains("deleted") || type.contains("disrupted")) {
                 aberration.addToCollection("deletedGenes", gene);
+                delCount++;
             } else if (type.contains("duplicated")) {
                 aberration.addToCollection("duplicatedGenes", gene);
+                dupCount++;
             }
         }
+        LOG.info("flybase-aberrations: processDelDup deletedRows=" + delCount
+                 + " duplicatedRows=" + dupCount + " negativesSkipped=" + skipped);
     }
 
     /**
-     * Parse the curated fbba_to_fbab*.tsv. For each row, find the Balancer
-     * (created by processSynonyms) and attach each pipe-separated FBab as an
-     * Aberration in its composedOfAberrations collection. Tolerates balancers
-     * absent from synonyms (skipped) and rows with empty composition
-     * (Balancer remains in place with no composedOfAberrations).
+     * Parse the curated fbba_to_fbab*.tsv. Order-tolerant — creates stub
+     * Balancer and Aberration items if not yet seen.
      */
     void processCuratedBalancers(Reader reader) throws Exception {
         BufferedReader br = new BufferedReader(reader);
         String line;
+        int balancerRows = 0;
+        int composedAdds = 0;
         while ((line = br.readLine()) != null) {
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
@@ -179,8 +252,9 @@ public class FlybaseAberrationsConverter extends BioFileConverter
             }
             String fbba = cols[0];
             String fbabIds = cols[2];
-            Item balancer = balancersById.get(fbba);
-            if (balancer == null || fbabIds.isEmpty()) {
+            Item balancer = getOrCreateBalancer(fbba);
+            balancerRows++;
+            if (fbabIds.isEmpty()) {
                 continue;
             }
             for (String fbab : fbabIds.split("\\|")) {
@@ -188,13 +262,13 @@ public class FlybaseAberrationsConverter extends BioFileConverter
                 if (trimmed.isEmpty()) {
                     continue;
                 }
-                Item aberration = aberrationsById.get(trimmed);
-                if (aberration == null) {
-                    continue;
-                }
+                Item aberration = getOrCreateAberration(trimmed);
                 balancer.addToCollection("composedOfAberrations", aberration);
+                composedAdds++;
             }
         }
+        LOG.info("flybase-aberrations: processCuratedBalancers rows=" + balancerRows
+                 + " composedAdds=" + composedAdds);
     }
 
     /**
@@ -230,13 +304,16 @@ public class FlybaseAberrationsConverter extends BioFileConverter
 
     /**
      * Deferred store: items are accumulated during process() across multiple
-     * input files so that del/dup and curated balancer collections can be
-     * attached before the items hit the ItemWriter. Stored in
-     * Aberration -> Balancer -> Gene order; Gene items are created lazily by
-     * processDelDup.
+     * input files in non-deterministic order, mutated as more files are read,
+     * then stored at the end so collection mutations from later files persist.
+     * Store order: Aberration -> Balancer -> Gene.
      */
     @Override
     public void close() throws Exception {
+        LOG.info("flybase-aberrations: close(): storing "
+                 + aberrationsById.size() + " aberrations, "
+                 + balancersById.size() + " balancers, "
+                 + genesByFbgn.size() + " genes");
         for (Item ab : aberrationsById.values()) {
             store(ab);
         }

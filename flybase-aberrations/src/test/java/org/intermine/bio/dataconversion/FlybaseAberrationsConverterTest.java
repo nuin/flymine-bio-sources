@@ -115,6 +115,79 @@ public class FlybaseAberrationsConverterTest extends ItemsTestCase
     }
 
     /**
+     * Bugfix 2026-06-02 — file iteration order is non-deterministic in
+     * BioFileConverter. Run delDup BEFORE synonyms and confirm the resulting
+     * stored items still have populated deletedGenes / duplicatedGenes
+     * collections. (Symptom that motivated the fix: AllianceMineDev integrate
+     * produced 23,870 Aberrations + 642 Balancers but 0 rows in
+     * aberrationdeletedgenes/duplicatedgenes/balancercomposedofaberrations.)
+     */
+    public void testDelDupBeforeSynonymsStillWiresCollections() throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        // INTENTIONALLY OUT OF ORDER: del/dup before synonyms
+        c.setCurrentFile(new File("aberration_del_dup_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/aberration_del_dup_test.tsv")));
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        Item ab1 = items.stream()
+            .filter(i -> "Aberration".equals(i.getClassName()))
+            .filter(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBab0001001".equals(a.getValue())))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("FBab0001001 not stored"));
+
+        long deletedCount = ab1.getCollections().stream()
+            .filter(c2 -> "deletedGenes".equals(c2.getName()))
+            .mapToLong(c2 -> c2.getRefIds().size()).sum();
+        assertEquals("out-of-order: FBab0001001 should still have 2 deletedGenes",
+                     2, deletedCount);
+
+        // Also confirm the enriched FBab carries symbol + aberrationType from synonyms
+        boolean hasSymbol = ab1.getAttributes().stream().anyMatch(a ->
+            "symbol".equals(a.getName()) && "Df(2R)test1".equals(a.getValue()));
+        boolean hasType = ab1.getAttributes().stream().anyMatch(a ->
+            "aberrationType".equals(a.getName()) && "deletion".equals(a.getValue()));
+        assertTrue("synonyms must enrich (not replace) the stub Aberration: symbol", hasSymbol);
+        assertTrue("synonyms must enrich (not replace) the stub Aberration: type", hasType);
+    }
+
+    /**
+     * Bugfix 2026-06-02 — companion .tsv.gz file must not be re-processed.
+     * If both fb_synonym_test.tsv and fb_synonym_test.tsv.gz are passed in,
+     * the .gz must be skipped to avoid garbage-parsing or duplicate stubs.
+     */
+    public void testGzCompanionIsSkipped() throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        // .tsv first (normal processing), then a fictional .tsv.gz with the same name —
+        // should be skipped without exception even though we pass a non-gzip Reader.
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        c.setCurrentFile(new File("fb_synonym_test.tsv.gz"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));  // reader is real but file is .gz
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        long aberrations = items.stream()
+            .filter(i -> "Aberration".equals(i.getClassName())).count();
+        // 5 from .tsv; .tsv.gz skipped → still 5
+        assertEquals(5, aberrations);
+    }
+
+    /**
      * Task 10 — curated fbba_to_fbab table wires composedOfAberrations;
      * balancers with empty composition still exist as Balancer items.
      */
