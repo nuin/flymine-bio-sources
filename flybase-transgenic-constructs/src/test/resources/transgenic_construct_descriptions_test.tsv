@@ -1,0 +1,7 @@
+## FlyBase Transgenic Construct Data Report (test fixture)
+##
+#construct_FBtp_id	construct_symbol	encoded_features	encoded_features_ids	related_FBti	related_FBti_ids
+FBtp0000001	P{lacW}	lacZ; w[+mC]	FBgn0014447; FBgn0003996	P{lacW}gukh[k08210]; P{lacW}gukh[k08211]	FBti0000001; FBti0000002
+FBtp0000002	P{UAS-X}	UAS-X	FBgn0040255	P{UAS-X}foo	FBti0000003
+FBtp0000003	P{empty}	just text
+FBtp0000004	P{noRefs}

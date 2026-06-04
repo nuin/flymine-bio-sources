@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!--
+  Schema additions for flybase-transgenic-constructs (FBtp).
+
+  FBtps are the molecular tools used to make transgenic stocks (e.g.
+  P{lacW}, P{UAS-GAL4}, P{Avic\GFP}). Each FBtp encodes one or more genes
+  (FBgn) and is associated with one or more FBti insertion events.
+
+  TransgenicConstruct is a new class — verified absent from the merged
+  genomic model 2026-06-04. Extends BioEntity for the standard identifier
+  / symbol / synonym / organism inheritance.
+
+  Reverse refs on Gene and TransposableElementInsertionSite are declared
+  here so the lean source can wire them at integrate time.
+-->
+<classes>
+
+  <class name="TransgenicConstruct" extends="BioEntity" is-interface="true">
+    <attribute name="description" type="java.lang.String"/>
+    <collection name="encodedGenes" referenced-type="Gene"
+                reverse-reference="encodedByConstructs"/>
+    <collection name="relatedInsertions"
+                referenced-type="TransposableElementInsertionSite"
+                reverse-reference="relatedConstructs"/>
+  </class>
+
+  <class name="Gene" is-interface="true">
+    <collection name="encodedByConstructs" referenced-type="TransgenicConstruct"
+                reverse-reference="encodedGenes"/>
+  </class>
+
+  <class name="TransposableElementInsertionSite" is-interface="true">
+    <collection name="relatedConstructs" referenced-type="TransgenicConstruct"
+                reverse-reference="relatedInsertions"/>
+  </class>
+
+</classes>
