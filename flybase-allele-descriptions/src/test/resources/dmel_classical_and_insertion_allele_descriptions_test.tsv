@@ -1,0 +1,7 @@
+## FlyBase D. melanogaster classical and insertion allele descriptions report (test fixture)
+##
+#Allele (symbol)	Allele (id)	Gene (symbol)	Gene (id)	Allele Class (term)	Allele Class (id)	Insertion (symbol)	Insertion (id)	Inserted element type (term)	Inserted element type (id)	Regulatory region (symbol)	Regulatory region (id)	Encoded product/tool (symbol)	Encoded product/tool (id)	Tagged with (symbol)	Tagged with (id)	Also carries (symbol)	Also carries (id)	Description (text)	Description (supporting reference)	Stocks (number)
+alpha-Spec[1]	FBal0000001	alpha-Spec	FBgn0250789																	0
+alphaTub67C[1]	FBal0000008	alphaTub67C	FBgn0087040	hypomorphic allele - genetic evidence	FBcv:0000289									Female sterile allele described in Smith 2010	FBrf0000001	2
+TestAllele[2]	FBal0000099	testGene	FBgn0000099	loss of function	FBcv:0000287									Multi-reference description	FBrf0000010|FBrf0000020|FBrf0000030	5
+EmptyRefAllele	FBal0000100	g	FBgn0000100																Has description, no FBrf	0
