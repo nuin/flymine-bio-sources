@@ -17,6 +17,17 @@
 
   Aberration and Balancer inherit all of the above. Do NOT redeclare any of them
   in this file.
+
+  Phase 2 additions (2026-06-03) — for FlyBase-parity per BDSC Phase 2 Aim 1:
+    - Aberration / Balancer: carriedAlleles (Allele physically present on the
+      aberration/balancer — distinct from deletedGenes/duplicatedGenes)
+    - Aberration: complementationResults (-> new ComplementationResult class
+      capturing pairwise tested results)
+    - Aberration: cytologicalBreakpoints (-> new CytologicalBand extends Location)
+    - Allele: reverse refs carriedByAberrations + carriedByBalancers
+    Schema only in this commit. Converter SQL extensions wait on FlyBase
+    chado team confirmation of cvterm names for the underlying feature_relationship
+    / feature_genotype queries. See HANDOFF_BUILDER_PHASE2_AIM1_2026-06-02 §3.
 -->
 <classes>
 
@@ -25,11 +36,20 @@
     <collection name="deletedGenes"    referenced-type="Gene"/>
     <collection name="duplicatedGenes" referenced-type="Gene"/>
     <collection name="breakpoints"     referenced-type="Location"/>
+    <!-- Phase 2 -->
+    <collection name="carriedAlleles" referenced-type="Allele"
+                reverse-reference="carriedByAberrations"/>
+    <collection name="complementationResults" referenced-type="ComplementationResult"
+                reverse-reference="subject"/>
+    <collection name="cytologicalBreakpoints" referenced-type="CytologicalBand"/>
   </class>
 
   <class name="Balancer" extends="Allele" is-interface="true">
     <collection name="composedOfAberrations" referenced-type="Aberration"/>
     <attribute  name="balancedChromosome"    type="java.lang.String"/>
+    <!-- Phase 2 -->
+    <collection name="carriedAlleles" referenced-type="Allele"
+                reverse-reference="carriedByBalancers"/>
   </class>
 
   <class name="Gene" is-interface="true">
@@ -39,6 +59,28 @@
     <collection name="duplicatedByAberrations"
                 referenced-type="Aberration"
                 reverse-reference="duplicatedGenes"/>
+  </class>
+
+  <!-- Phase 2 — new classes for FlyBase parity -->
+
+  <class name="Allele" is-interface="true">
+    <collection name="carriedByAberrations" referenced-type="Aberration"
+                reverse-reference="carriedAlleles"/>
+    <collection name="carriedByBalancers"   referenced-type="Balancer"
+                reverse-reference="carriedAlleles"/>
+  </class>
+
+  <class name="ComplementationResult" is-interface="true">
+    <reference  name="subject" referenced-type="Aberration"
+                reverse-reference="complementationResults"/>
+    <reference  name="partner" referenced-type="BioEntity"/>
+    <attribute  name="result"  type="java.lang.String"/>
+    <attribute  name="notes"   type="java.lang.String"/>
+    <collection name="publications" referenced-type="Publication"/>
+  </class>
+
+  <class name="CytologicalBand" extends="Location" is-interface="true">
+    <attribute name="cytologicalCoordinates" type="java.lang.String"/>
   </class>
 
 </classes>
