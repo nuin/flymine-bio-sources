@@ -23,4 +23,11 @@
     <collection name="descriptionReferences" referenced-type="Publication"/>
   </class>
 
+  <!-- Publication.primaryIdentifier needed for the FBrf merge key (keys.properties
+       declares Publication.key=primaryIdentifier; this attribute didn't exist in
+       the base genomic model). Builder upstream patch 2026-06-04. -->
+  <class name="Publication" is-interface="true">
+    <attribute name="primaryIdentifier" type="java.lang.String"/>
+  </class>
+
 </classes>

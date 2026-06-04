@@ -10,6 +10,7 @@ include ':bio-source-affy-probes',
 ':bio-source-flyatlas',
 ':bio-source-flybase-aberrations',
 ':bio-source-flybase-allele-descriptions',
+':bio-source-flybase-allele-stubs',
 ':bio-source-flybase-alleles',
 ':bio-source-flybase-expression',
 ':bio-source-fly-development-ontology',
@@ -32,6 +33,7 @@ project(':bio-source-fly-anatomy-ontology').projectDir = new File(settingsDir, '
 project(':bio-source-flyatlas').projectDir = new File(settingsDir, './flyatlas')
 project(':bio-source-flybase-aberrations').projectDir = new File(settingsDir, './flybase-aberrations')
 project(':bio-source-flybase-allele-descriptions').projectDir = new File(settingsDir, './flybase-allele-descriptions')
+project(':bio-source-flybase-allele-stubs').projectDir = new File(settingsDir, './flybase-allele-stubs')
 project(':bio-source-flybase-alleles').projectDir = new File(settingsDir, './flybase-alleles')
 project(':bio-source-flybase-expression').projectDir = new File(settingsDir, './flybase-expression')
 project(':bio-source-fly-development-ontology').projectDir = new File(settingsDir, './fly-development-ontology')

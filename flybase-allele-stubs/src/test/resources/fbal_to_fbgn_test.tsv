@@ -1,0 +1,8 @@
+## FlyBase FBal -> FBgn mapping (test fixture)
+##
+#	AlleleID	AlleleSymbol	GeneID	GeneSymbol
+FBal0000001	alpha-Spec[1]	FBgn0250789	alpha-Spec
+FBal0000099	Ecol\lacZ[T125]	FBgn0014447	Ecol\lacZ
+FBal0000200	Scer\GAL4[sd-SG29.1]	FBgn0040255	Scer\GAL4
+malformed_row
+FBal0000300		FBgn0000300	geneX

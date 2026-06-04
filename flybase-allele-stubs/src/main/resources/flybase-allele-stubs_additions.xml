@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+  Schema additions for flybase-allele-stubs.
+
+  No new fields needed — the converter only sets Allele.primaryIdentifier,
+  Allele.symbol, Allele.organism, Allele.gene (reverse=alleles), and
+  Gene.primaryIdentifier + Gene.organism. All present in the base
+  genomic model.
+
+  Placeholder XML kept so the bio-source plugin's processing of additions
+  files doesn't trip on a missing file. See flybase-allele-stubs_keys.properties
+  for the loader merge keys.
+-->
+<classes>
+</classes>
