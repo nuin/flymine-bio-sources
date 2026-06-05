@@ -1,7 +1,9 @@
-## FlyBase Transgenic Construct Data Report (test fixture)
+## FlyBase D. melanogaster transgenic construct descriptions report (test fixture)
+## Generated: test
 ##
-#construct_FBtp_id	construct_symbol	encoded_features	encoded_features_ids	related_FBti	related_FBti_ids
-FBtp0000001	P{lacW}	lacZ; w[+mC]	FBgn0014447; FBgn0003996	P{lacW}gukh[k08210]; P{lacW}gukh[k08211]	FBti0000001; FBti0000002
-FBtp0000002	P{UAS-X}	UAS-X	FBgn0040255	P{UAS-X}foo	FBti0000003
-FBtp0000003	P{empty}	just text
-FBtp0000004	P{noRefs}
+#Component Allele (symbol)	Component Allele (id)	Transgenic Construct (symbol)	Transgenic Construct (id)	Transgenic Product class (term)	Transgenic Product class (id)	Regulatory region (symbol)	Regulatory region (id)	Encoded product/tool (symbol)	Encoded product/tool (id)	Tagged with (symbol)	Tagged with (id)	Also carries (symbol)	Also carries (id)	Description (text)	Description (supporting reference)	Stocks (number)
+lacZ[T125]	FBal0000099	P{lacW}	FBtp0000001	reporter-allele	FBcv:0000001	hsp70	FBgn0001235	lacZ	FBgn0014447	GFP	FBgn0003996	w[+mC]; mini-white	FBgn0003996; FBgn0003997	Classic lacZ reporter construct	FBrf0000001	5
+white[mini]	FBal0000100	P{lacW}	FBtp0000001	reporter-allele	FBcv:0000001
+GAL4[sd-SG29.1]	FBal0000200	P{Gal4-sd}	FBtp0000002	driver	FBcv:0000002	scalloped	FBgn0040255	GAL4	FBgn0014445		FBgn9999999	UAS-X	FBgn0040999	sd promoter driver	FBrf0000002	12
+notFBtpRow	FBal0000300	NotAConstruct	FBgn0040000	noise
+malformed

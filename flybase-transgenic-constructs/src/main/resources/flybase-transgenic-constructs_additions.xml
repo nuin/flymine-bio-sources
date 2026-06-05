@@ -1,37 +1,56 @@
 <?xml version="1.0"?>
 <!--
-  Schema additions for flybase-transgenic-constructs (FBtp).
+  Schema additions for flybase-transgenic-constructs.
 
-  FBtps are the molecular tools used to make transgenic stocks (e.g.
-  P{lacW}, P{UAS-GAL4}, P{Avic\GFP}). Each FBtp encodes one or more genes
-  (FBgn) and is associated with one or more FBti insertion events.
+  REWRITTEN 2026-06-05 — the actual FB2026_01 file format
+  (transgenic_construct_descriptions_*.tsv) is 17 columns and
+  allele-centric (one row per (component allele, transgenic construct)
+  pair), not the 6-col construct-centric shape the round 3 spec assumed.
+  Round 3's converter silently skipped every row because
+  name.startsWith("FBtp") on col 1 (an FBal symbol) never matched.
 
-  TransgenicConstruct is a new class — verified absent from the merged
-  genomic model 2026-06-04. Extends BioEntity for the standard identifier
-  / symbol / synonym / organism inheritance.
+  This schema mirrors the corrected layout in
+  FLYMINE_PHASE2_ROUND3_CLOSEOUT_HANDOFF_2026_06_05.md §3:
+    - scalar attrs on TransgenicConstruct from cols 2/3/5/7/9/11/13/15/17
+    - componentAlleles collection from col 2 FBals (many-to-one by FBtp)
+    - alsoCarriesGenes collection from col 14 FBgn list (semicolon-split)
+    - reverse refs on Allele (componentOfConstructs) and Gene
+      (alsoCarriedByConstructs)
 
-  Reverse refs on Gene and TransposableElementInsertionSite are declared
-  here so the lean source can wire them at integrate time.
+  TransgenicConstruct extends BioEntity directly (not SequenceFeature) —
+  per FLYMINE_PHASE2_ROUND3_CLOSEOUT §4 inheritance-gotcha discussion the
+  field doesn't need a sequenceOntologyTerm override since the class is
+  outside the SequenceFeature hierarchy. The SequenceFeature.* priority
+  line in genomic_priorities.properties does include
+  flybase-transgenic-constructs anyway because this source creates Gene
+  refs (by FBgn) that inherit sequenceOntologyTerm via Gene → SequenceFeature.
 -->
 <classes>
 
   <class name="TransgenicConstruct" extends="BioEntity" is-interface="true">
-    <attribute name="description" type="java.lang.String"/>
-    <collection name="encodedGenes" referenced-type="Gene"
-                reverse-reference="encodedByConstructs"/>
-    <collection name="relatedInsertions"
-                referenced-type="TransposableElementInsertionSite"
-                reverse-reference="relatedConstructs"/>
+    <attribute name="description"      type="java.lang.String"/>
+    <attribute name="productClass"     type="java.lang.String"/>
+    <attribute name="regulatoryRegion" type="java.lang.String"/>
+    <attribute name="encodedProduct"   type="java.lang.String"/>
+    <attribute name="taggedWith"       type="java.lang.String"/>
+    <attribute name="alsoCarries"      type="java.lang.String"/>
+    <attribute name="stockCount"       type="java.lang.Integer"/>
+    <collection name="componentAlleles"  referenced-type="Allele"
+                reverse-reference="componentOfConstructs"/>
+    <collection name="alsoCarriesGenes"  referenced-type="Gene"
+                reverse-reference="alsoCarriedByConstructs"/>
+  </class>
+
+  <class name="Allele" is-interface="true">
+    <collection name="componentOfConstructs"
+                referenced-type="TransgenicConstruct"
+                reverse-reference="componentAlleles"/>
   </class>
 
   <class name="Gene" is-interface="true">
-    <collection name="encodedByConstructs" referenced-type="TransgenicConstruct"
-                reverse-reference="encodedGenes"/>
-  </class>
-
-  <class name="TransposableElementInsertionSite" is-interface="true">
-    <collection name="relatedConstructs" referenced-type="TransgenicConstruct"
-                reverse-reference="relatedInsertions"/>
+    <collection name="alsoCarriedByConstructs"
+                referenced-type="TransgenicConstruct"
+                reverse-reference="alsoCarriesGenes"/>
   </class>
 
 </classes>

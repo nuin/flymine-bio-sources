@@ -1,7 +1,0 @@
-## FlyBase insertion mapping report (test fixture)
-##
-##fbti_id	symbol	genomic_location	range	orientation	estimated_cytogenetic_location	observed_cytogenetic_location
-FBti0000001	P{lacW}gukh[k08210]	2L:7,238,500..7,238,500	2L:7238500-7238500	+	24A2-24A2	24A2-24A2
-FBti0000002	P{UAS-X}foo	X:1,000,000..1,000,500	X:1000000-1000500	-	1A1-1A1	1A1-1A1
-FBti0000003	P{lacZ}noloc
-FBti0000004	P{noStrand}bar	3R:42..50	3R:42-50

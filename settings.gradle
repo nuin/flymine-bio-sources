@@ -12,7 +12,6 @@ include ':bio-source-affy-probes',
 ':bio-source-flybase-allele-descriptions',
 ':bio-source-flybase-allele-stubs',
 ':bio-source-flybase-alleles',
-':bio-source-flybase-insertions',
 ':bio-source-flybase-transgenic-constructs',
 ':bio-source-flybase-expression',
 ':bio-source-fly-development-ontology',
@@ -37,7 +36,6 @@ project(':bio-source-flybase-aberrations').projectDir = new File(settingsDir, '.
 project(':bio-source-flybase-allele-descriptions').projectDir = new File(settingsDir, './flybase-allele-descriptions')
 project(':bio-source-flybase-allele-stubs').projectDir = new File(settingsDir, './flybase-allele-stubs')
 project(':bio-source-flybase-alleles').projectDir = new File(settingsDir, './flybase-alleles')
-project(':bio-source-flybase-insertions').projectDir = new File(settingsDir, './flybase-insertions')
 project(':bio-source-flybase-transgenic-constructs').projectDir = new File(settingsDir, './flybase-transgenic-constructs')
 project(':bio-source-flybase-expression').projectDir = new File(settingsDir, './flybase-expression')
 project(':bio-source-fly-development-ontology').projectDir = new File(settingsDir, './fly-development-ontology')
