@@ -13,7 +13,10 @@ package org.intermine.bio.dataconversion;
 import java.io.BufferedReader;
 import java.io.Reader;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,6 +61,11 @@ public class FlybaseAberrationsConverter extends BioFileConverter
     private final Map<String, Item> aberrationsBySymbol = new HashMap<String, Item>();
     private final Map<String, Item> balancersById   = new HashMap<String, Item>();
     private final Map<String, Item> genesByFbgn     = new HashMap<String, Item>();
+    /** FBab -> set of distinct cytological band strings (e.g. "51A5", "26A2-26A5").
+     *  The breakpoints TSV is per-(aberration, breakpoint feature) but the cyto_loc
+     *  column repeats per-aberration content across all of an FBab's breakpoint rows;
+     *  dedupe here to avoid producing multiple identical CytologicalBand items. */
+    private final Map<String, Set<String>> bandsByFbab = new HashMap<String, Set<String>>();
     private Item organism;
 
     /**
@@ -91,6 +99,8 @@ public class FlybaseAberrationsConverter extends BioFileConverter
             processDelDup(reader);
         } else if (name.startsWith("fbba_to_fbab")) {
             processCuratedBalancers(reader);
+        } else if (name.startsWith("aberration_cytological_breakpoints")) {
+            processBreakpoints(reader);
         } else {
             LOG.info("flybase-aberrations: unrecognised filename " + name + " — skipping");
         }
@@ -304,6 +314,78 @@ public class FlybaseAberrationsConverter extends BioFileConverter
     }
 
     /**
+     * Parse the builder-side aberration_cytological_breakpoints.tsv dump
+     * (the chado SQL extraction documented in
+     * agr_intermine_builder/docs/FLYMINE_SIBLING_REPLY_2026_06_08.md §2).
+     *
+     * Columns (tab-separated, empty for NULL):
+     *   1: fbab             (FBab uniquename)
+     *   2: breakpoint_name  (chromosome_breakpoint feature, e.g. Df(2R)03072:bk1)
+     *   3: genomic_loc      (text or empty, e.g. X_r6:7901330..7956278)
+     *   4: chrom            (parsed from genomic_loc)
+     *   5: fmin             (int)
+     *   6: fmax             (int)
+     *   7: cyto_loc         (per-FBab derived_attributed_breakpoint;
+     *                        semicolon-separated for multi-breakpoint, e.g.
+     *                        "51A5;51C1" or "25E1-25E2;26A2-26A5")
+     *
+     * The cyto_loc field is per-aberration (NOT per-breakpoint). Every row
+     * for a given FBab carries the same cyto_loc text. To avoid producing
+     * duplicate CytologicalBand items we dedupe (fbab, band) pairs via
+     * bandsByFbab; the CytologicalBand items themselves are created in
+     * close() after all rows are read.
+     *
+     * v1 scope: only cytological bands (col 7). Per-breakpoint genomic
+     * coords (cols 3-6) are deferred — would require a separate
+     * Chromosome+Location item chain per breakpoint feature, and the
+     * coverage (9,918 of 68,591 rows = 14%) is sparse enough that a
+     * dedicated v2 follow-up is cleaner than a partial v1.
+     */
+    void processBreakpoints(Reader reader) throws Exception {
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        int rows = 0;
+        int distinctFbabs = 0;
+        int newBandPairs = 0;
+        while ((line = br.readLine()) != null) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            String[] cols = line.split("\\t", -1);
+            if (cols.length < 7) {
+                continue;
+            }
+            String fbab = cols[0].trim();
+            if (fbab.isEmpty() || !fbab.startsWith("FBab")) {
+                continue;
+            }
+            rows++;
+            String cytoLoc = cols[6].trim();
+            if (cytoLoc.isEmpty()) {
+                continue;
+            }
+            Set<String> bands = bandsByFbab.get(fbab);
+            if (bands == null) {
+                bands = new LinkedHashSet<String>();
+                bandsByFbab.put(fbab, bands);
+                distinctFbabs++;
+            }
+            for (String band : cytoLoc.split(";")) {
+                String trimmed = band.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                if (bands.add(trimmed)) {
+                    newBandPairs++;
+                }
+            }
+        }
+        LOG.info("flybase-aberrations: processBreakpoints rows=" + rows
+                 + " distinct FBabs with cyto_loc=" + distinctFbabs
+                 + " distinct (fbab, band) pairs=" + newBandPairs);
+    }
+
+    /**
      * Map FlyBase aberration symbol prefix to a coarse aberrationType.
      * @param symbol the current_symbol field from fb_synonym (e.g. "Df(2R)min")
      * @return one of: deletion | duplication | inversion | translocation | other
@@ -342,10 +424,30 @@ public class FlybaseAberrationsConverter extends BioFileConverter
      */
     @Override
     public void close() throws Exception {
+        // Materialise CytologicalBand items from the deduped per-FBab
+        // band set BEFORE storing aberrations, so the
+        // cytologicalBreakpoints collection refs land on the persisted
+        // Item. CytologicalBand extends Location; v1 only sets
+        // cytologicalCoordinates (inherited start/end/strand/locatedOn
+        // left null since chado's band-level granularity has no
+        // molecular coordinates to map cleanly).
+        int totalBands = 0;
+        for (Map.Entry<String, Set<String>> e : bandsByFbab.entrySet()) {
+            Item aberration = getOrCreateAberration(e.getKey());
+            for (String band : e.getValue()) {
+                Item cb = createItem("CytologicalBand");
+                cb.setAttribute("cytologicalCoordinates", band);
+                store(cb);
+                aberration.addToCollection("cytologicalBreakpoints", cb);
+                totalBands++;
+            }
+        }
         LOG.info("flybase-aberrations: close(): storing "
                  + aberrationsById.size() + " aberrations, "
                  + balancersById.size() + " balancers, "
-                 + genesByFbgn.size() + " genes");
+                 + genesByFbgn.size() + " genes, "
+                 + totalBands + " CytologicalBand items (across "
+                 + bandsByFbab.size() + " FBabs)");
         for (Item ab : aberrationsById.values()) {
             store(ab);
         }

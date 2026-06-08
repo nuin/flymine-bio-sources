@@ -1,0 +1,6 @@
+#fbab	breakpoint_name	genomic_loc	chrom	fmin	fmax	cyto_loc
+FBab0001001	Df(2R)test1:bk1			51A5;51C1
+FBab0001001	Df(2R)test1:bk2			51A5;51C1
+FBab0001002	Dp(1;2)test2:bk1	X_r6:7901330..7956278	X_r6	7901330	7956278	25E1-25E2;26A2-26A5
+FBab0001003	In(2LR)test3:bk1			NoMatchingAberrationYet
+FBab0001005	Mystery(test5):bk1

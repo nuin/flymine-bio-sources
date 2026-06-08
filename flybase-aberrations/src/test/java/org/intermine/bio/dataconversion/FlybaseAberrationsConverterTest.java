@@ -161,6 +161,58 @@ public class FlybaseAberrationsConverterTest extends ItemsTestCase
     }
 
     /**
+     * 2026-06-08 — processBreakpoints reads the builder's TSV dump of
+     * chado-derived cytological coords (per FLYMINE_SIBLING_REPLY_2026_06_08
+     * §2). The cyto_loc field is per-aberration semicolon-separated; every
+     * row for the same FBab repeats the same content. Asserts:
+     *   - FBab0001001 has 2 rows with identical "51A5;51C1" -> 2 distinct
+     *     CytologicalBand items (deduped to one per band, not one per row)
+     *   - FBab0001002 has "25E1-25E2;26A2-26A5" -> 2 distinct bands
+     *   - Total CytologicalBand items = 4 (2+2; FBab0001005 has empty
+     *     cyto_loc so 0; FBab0001003's band reaches a stub-created
+     *     Aberration so 1)
+     *   - aberrationsById gains stub for FBab not seen elsewhere
+     */
+    public void testCytologicalBreakpointsParsedAndDeduped() throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        // synonyms first so the FBabs above (other than 0001003) are
+        // pre-existing — verifies merge-with-existing
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        c.setCurrentFile(new File("aberration_cytological_breakpoints_test.tsv"));
+        c.process(new InputStreamReader(getClass().getResourceAsStream(
+            "/aberration_cytological_breakpoints_test.tsv")));
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        long cytoBands = items.stream()
+            .filter(i -> "CytologicalBand".equals(i.getClassName())).count();
+        // FBab0001001: 2 bands (51A5, 51C1) — deduped across 2 input rows
+        // FBab0001002: 2 bands (25E1-25E2, 26A2-26A5)
+        // FBab0001003: 1 band (NoMatchingAberrationYet)
+        // FBab0001005: 0 (empty cyto_loc)
+        assertEquals(5, cytoBands);
+
+        // FBab0001001 ends up with exactly 2 cytologicalBreakpoints
+        // refs, not 4 (the dedupe across rows).
+        Item ab1 = items.stream()
+            .filter(i -> "Aberration".equals(i.getClassName()))
+            .filter(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBab0001001".equals(a.getValue())))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("FBab0001001 not stored"));
+        long ab1Bands = ab1.getCollections().stream()
+            .filter(col -> "cytologicalBreakpoints".equals(col.getName()))
+            .mapToLong(col -> col.getRefIds().size()).sum();
+        assertEquals("FBab0001001 should have 2 deduped bands, not 4", 2, ab1Bands);
+    }
+
+    /**
      * 2026-06-08 — the curated fbba_to_fbab.tsv accepts FBab symbols
      * (e.g. "In(2LR)test3") as an alternative to FBab IDs. Symbols are
      * resolved against the aberrationsBySymbol map built from the fb_synonym
