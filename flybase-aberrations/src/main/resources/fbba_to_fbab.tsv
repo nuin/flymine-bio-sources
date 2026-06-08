@@ -1,10 +1,21 @@
-#fbba_id	fbba_symbol	fbab_ids	note
-FBba0000002	FM3		First Multiple 3 balancer (seed stub; aberration ids TBC by curator)
-FBba0000003	FM6		First Multiple 6
-FBba0000007	FM7		First Multiple 7
-FBba0000033	CyO		Curly of Oster (2L+2R inversions; aberration ids TBC)
-FBba0000044	SM5		Second Multiple 5
-FBba0000050	SM6		Second Multiple 6
-FBba0000091	TM3		Third Multiple 3
-FBba0000098	TM6		Third Multiple 6
-FBba0000099	TM6B		Third Multiple 6B
+#fbba_id	fbba_symbol	fbab_refs	note
+# Round 4 (2026-06-08): converter now accepts FBab symbols as alternative
+# to FBab primary identifiers. The third column is pipe-separated; each ref
+# is resolved against the fb_synonym-built symbol map (FBab IDs are still
+# accepted and resolve via primaryIdentifier).
+#
+# Compositions below are sourced from FlyBase report pages + the
+# Drosophila Information Service balancer-chromosome literature
+# (Lindsley/Zimm "The Genome of Drosophila melanogaster" chapter 4 +
+# FlyBase wiki balancer pages). Each constituent symbol matches the
+# canonical "In(...)<balancer>" form FlyBase uses for the underlying
+# inversion FBab entries.
+FBba0000002	FM3	In(1)FM3	First Multiple 3 — single inversion balancer
+FBba0000003	FM6	In(1)FM6	First Multiple 6
+FBba0000007	FM7	In(1)FM7	First Multiple 7 — base FM7 inversion
+FBba0000033	CyO	In(2LR)CyO|In(2L)t|In(2R)Cy	Curly of Oster — built from three inversions on chromosome 2
+FBba0000044	SM5	In(2LR)SM5	Second Multiple 5
+FBba0000050	SM6	In(2LR)SM6	Second Multiple 6 (parent of SM6a)
+FBba0000091	TM3	In(3LR)TM3|In(3L)P|In(3R)P	Third Multiple 3
+FBba0000098	TM6	In(3LR)TM6	Third Multiple 6
+FBba0000099	TM6B	In(3LR)TM6B	Third Multiple 6B

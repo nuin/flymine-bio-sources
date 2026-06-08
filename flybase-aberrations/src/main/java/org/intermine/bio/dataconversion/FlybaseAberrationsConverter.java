@@ -55,6 +55,7 @@ public class FlybaseAberrationsConverter extends BioFileConverter
         Pattern.compile("^(Df|Dp|In|T)\\(.*\\).*");
 
     private final Map<String, Item> aberrationsById = new HashMap<String, Item>();
+    private final Map<String, Item> aberrationsBySymbol = new HashMap<String, Item>();
     private final Map<String, Item> balancersById   = new HashMap<String, Item>();
     private final Map<String, Item> genesByFbgn     = new HashMap<String, Item>();
     private Item organism;
@@ -176,6 +177,10 @@ public class FlybaseAberrationsConverter extends BioFileConverter
                     if (ab.getAttribute("aberrationType") == null) {
                         ab.setAttribute("aberrationType", aberrationTypeFromSymbol(symbol));
                     }
+                    // Index by symbol for the curated-balancers symbol-ref lookup.
+                    // Only first-seen wins on duplicate symbols (synonyms file has
+                    // one row per FBab so this is normally a no-op).
+                    aberrationsBySymbol.putIfAbsent(symbol, ab);
                 } else if (ab.getAttribute("aberrationType") == null) {
                     ab.setAttribute("aberrationType", "other");
                 }
@@ -234,14 +239,24 @@ public class FlybaseAberrationsConverter extends BioFileConverter
     }
 
     /**
-     * Parse the curated fbba_to_fbab*.tsv. Order-tolerant — creates stub
-     * Balancer and Aberration items if not yet seen.
+     * Parse the curated fbba_to_fbab*.tsv. Each row lists a balancer (FBba)
+     * and the FBab inversions that compose it. The fbab_ids column accepts
+     * EITHER FBab primary identifiers (FBab0000001, etc.) OR symbols of
+     * constituent inversions (e.g. In(2LR)CyO). Symbol refs are resolved
+     * against the aberrationsBySymbol map built from the fb_synonym pass —
+     * curators don't need to look up FBab IDs by hand for the well-known
+     * balancers whose inversion symbols are stable across FlyBase releases.
+     *
+     * Order-tolerant: creates stub Balancer + Aberration items as needed.
+     * Symbol refs that don't resolve are skipped silently (logged at INFO).
      */
     void processCuratedBalancers(Reader reader) throws Exception {
         BufferedReader br = new BufferedReader(reader);
         String line;
         int balancerRows = 0;
         int composedAdds = 0;
+        int symbolResolved = 0;
+        int symbolUnresolved = 0;
         while ((line = br.readLine()) != null) {
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
@@ -251,24 +266,41 @@ public class FlybaseAberrationsConverter extends BioFileConverter
                 continue;
             }
             String fbba = cols[0];
-            String fbabIds = cols[2];
+            String fbabRefs = cols[2];
             Item balancer = getOrCreateBalancer(fbba);
             balancerRows++;
-            if (fbabIds.isEmpty()) {
+            if (fbabRefs.isEmpty()) {
                 continue;
             }
-            for (String fbab : fbabIds.split("\\|")) {
-                String trimmed = fbab.trim();
+            for (String ref : fbabRefs.split("\\|")) {
+                String trimmed = ref.trim();
                 if (trimmed.isEmpty()) {
                     continue;
                 }
-                Item aberration = getOrCreateAberration(trimmed);
+                Item aberration;
+                if (trimmed.startsWith("FBab")) {
+                    // Direct FBab id: stub-create if not yet seen.
+                    aberration = getOrCreateAberration(trimmed);
+                } else {
+                    // Symbol reference: must already be in the synonyms-built map.
+                    aberration = aberrationsBySymbol.get(trimmed);
+                    if (aberration == null) {
+                        symbolUnresolved++;
+                        LOG.info("flybase-aberrations: curated balancer "
+                                 + fbba + " references unknown aberration symbol '"
+                                 + trimmed + "' — skipped");
+                        continue;
+                    }
+                    symbolResolved++;
+                }
                 balancer.addToCollection("composedOfAberrations", aberration);
                 composedAdds++;
             }
         }
         LOG.info("flybase-aberrations: processCuratedBalancers rows=" + balancerRows
-                 + " composedAdds=" + composedAdds);
+                 + " composedAdds=" + composedAdds
+                 + " symbolResolved=" + symbolResolved
+                 + " symbolUnresolved=" + symbolUnresolved);
     }
 
     /**

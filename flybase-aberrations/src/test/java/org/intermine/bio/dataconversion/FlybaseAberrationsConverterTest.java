@@ -161,6 +161,48 @@ public class FlybaseAberrationsConverterTest extends ItemsTestCase
     }
 
     /**
+     * 2026-06-08 — the curated fbba_to_fbab.tsv accepts FBab symbols
+     * (e.g. "In(2LR)test3") as an alternative to FBab IDs. Symbols are
+     * resolved against the aberrationsBySymbol map built from the fb_synonym
+     * file; unresolved symbols are skipped silently. This is the lookup
+     * path the production curated table uses now that round 4's classic-
+     * balancer compositions reference inversion symbols rather than IDs.
+     */
+    public void testCuratedBalancersResolveAberrationSymbols() throws Exception {
+        MockItemWriter writer =
+            new MockItemWriter(new LinkedHashMap<String, Item>());
+        FlybaseAberrationsConverter c =
+            new FlybaseAberrationsConverter(writer, Model.getInstanceByName("genomic"));
+        // synonyms first so symbols are indexed
+        c.setCurrentFile(new File("fb_synonym_test.tsv"));
+        c.process(new InputStreamReader(
+            getClass().getResourceAsStream("/fb_synonym_test.tsv")));
+        // Then a hand-rolled curated row that uses symbols (not FBab ids).
+        // Fixture's FBab0001003 has symbol In(2LR)test3 and FBab0001004 has
+        // T(2;3)test4 — both should resolve via the symbol map.
+        String inMemoryCurated =
+            "#fbba_id\tfbba_symbol\tfbab_refs\tnote\n"
+            + "FBba0001001\tTestBal1\tIn(2LR)test3|T(2;3)test4\tsymbol refs\n";
+        c.setCurrentFile(new File("fbba_to_fbab.tsv"));
+        c.process(new java.io.StringReader(inMemoryCurated));
+        c.close();
+
+        Collection<Item> items = writer.getItems();
+        Item bal1 = items.stream()
+            .filter(i -> "Balancer".equals(i.getClassName()))
+            .filter(i -> i.getAttributes().stream().anyMatch(a ->
+                "primaryIdentifier".equals(a.getName())
+                && "FBba0001001".equals(a.getValue())))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("FBba0001001 not stored"));
+        long composedCount = bal1.getCollections().stream()
+            .filter(col -> "composedOfAberrations".equals(col.getName()))
+            .mapToLong(col -> col.getRefIds().size()).sum();
+        assertEquals("symbol-based fbab refs must resolve to 2 aberrations",
+                     2, composedCount);
+    }
+
+    /**
      * Bugfix 2026-06-02 — companion .tsv.gz file must not be re-processed.
      * If both fb_synonym_test.tsv and fb_synonym_test.tsv.gz are passed in,
      * the .gz must be skipped to avoid garbage-parsing or duplicate stubs.
