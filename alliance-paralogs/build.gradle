@@ -1,0 +1,25 @@
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java', 'build/gen']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
+}
+
+processResources {
+    from('.') { include ("*.properties")}
+}
+
+// Ported unchanged from alliancemine-bio-sources, which does not run checkstyle.
+tasks.withType(Checkstyle) { enabled = false }

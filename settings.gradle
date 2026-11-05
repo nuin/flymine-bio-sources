@@ -1,6 +1,15 @@
 rootProject.name = 'bio-sources-fly'
 
 include ':bio-source-affy-probes',
+':bio-source-alliance-orthologs',
+':bio-source-alliance-disease',
+':bio-source-alliance-disease-alleles',
+':bio-source-alliance-disease-detail',
+':bio-source-alliance-genetic-interactions',
+':bio-source-alliance-molecular-interactions',
+':bio-source-alliance-variants',
+':bio-source-alliance-gene-descriptions',
+':bio-source-alliance-paralogs',
 ':bio-source-flybase-gene-descriptions',
 ':bio-source-flybase-protein-symbol',
 ':bio-source-flybase-gene-crossreferences',
@@ -55,3 +64,12 @@ project(':bio-source-long-oligo').projectDir = new File(settingsDir, './long-oli
 project(':bio-source-miranda').projectDir = new File(settingsDir, './miranda')
 project(':bio-source-redfly').projectDir = new File(settingsDir, './redfly')
 project(':bio-source-rnai').projectDir = new File(settingsDir, './rnai')
+project(':bio-source-alliance-orthologs').projectDir = new File(settingsDir, './alliance-orthologs')
+project(':bio-source-alliance-disease').projectDir = new File(settingsDir, './alliance-disease')
+project(':bio-source-alliance-disease-alleles').projectDir = new File(settingsDir, './alliance-disease-alleles')
+project(':bio-source-alliance-disease-detail').projectDir = new File(settingsDir, './alliance-disease-detail')
+project(':bio-source-alliance-genetic-interactions').projectDir = new File(settingsDir, './alliance-genetic-interactions')
+project(':bio-source-alliance-molecular-interactions').projectDir = new File(settingsDir, './alliance-molecular-interactions')
+project(':bio-source-alliance-variants').projectDir = new File(settingsDir, './alliance-variants')
+project(':bio-source-alliance-gene-descriptions').projectDir = new File(settingsDir, './alliance-gene-descriptions')
+project(':bio-source-alliance-paralogs').projectDir = new File(settingsDir, './alliance-paralogs')
