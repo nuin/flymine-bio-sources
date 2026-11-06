@@ -1,6 +1,10 @@
 rootProject.name = 'bio-sources-fly'
 
 include ':bio-source-affy-probes',
+':bio-source-flybase-gene-descriptions',
+':bio-source-flybase-protein-symbol',
+':bio-source-flybase-gene-crossreferences',
+':bio-source-flybase-human-orthologs',
 ':bio-source-arbeitman-items-xml',
 ':bio-source-bdgp-clone',
 ':bio-source-bdgp-insitu',
@@ -25,6 +29,10 @@ include ':bio-source-affy-probes',
 ':bio-source-rnai'
 
 project(':bio-source-affy-probes').projectDir = new File(settingsDir, './affy-probes')
+project(':bio-source-flybase-gene-descriptions').projectDir = new File(settingsDir, './flybase-gene-descriptions')
+project(':bio-source-flybase-protein-symbol').projectDir = new File(settingsDir, './flybase-protein-symbol')
+project(':bio-source-flybase-gene-crossreferences').projectDir = new File(settingsDir, './flybase-gene-crossreferences')
+project(':bio-source-flybase-human-orthologs').projectDir = new File(settingsDir, './flybase-human-orthologs')
 project(':bio-source-arbeitman-items-xml').projectDir = new File(settingsDir, './arbeitman-items-xml')
 project(':bio-source-bdgp-clone').projectDir = new File(settingsDir, './bdgp-clone')
 project(':bio-source-bdgp-insitu').projectDir = new File(settingsDir, './bdgp-insitu')
