@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<!-- FlyMine: classes and fields the alliance-* sources need, taken from the AllianceMine 9.2.0 model.
+     The same file ships in every alliance-* module; InterMine merges identical definitions. -->
+<classes>
+<class name="DiseaseAnnotation" extends="OntologyAnnotation" is-interface="true">
+  <attribute name="evidenceType" type="java.lang.String"/>
+  <attribute name="diseaseQualifiers" type="java.lang.String"/>
+  <attribute name="viaOrthologyOrder" type="java.lang.Integer"/>
+  <attribute name="generatedRelationString" type="java.lang.String"/>
+  <attribute name="parentSlimIds" type="java.lang.String"/>
+  <attribute name="uniqueId" type="java.lang.String"/>
+  <reference name="experimentalGene" referenced-type="Gene" reverse-reference="experimentalDiseaseAnnotations"/>
+  <reference name="alleleSubject" referenced-type="Allele" reverse-reference="diseaseAnnotations"/>
+  <collection name="slimTerms" referenced-type="DOTerm"/>
+</class>
+<class name="DiseaseEvidence" extends="OntologyEvidence" is-interface="true">
+  <attribute name="withText" type="java.lang.String"/>
+  <attribute name="inferredFrom" type="java.lang.String"/>
+  <attribute name="annotType" type="java.lang.String"/>
+  <attribute name="experimentCondition" type="java.lang.String"/>
+  <attribute name="dateAssigned" type="java.util.Date"/>
+  <attribute name="modifier" type="java.lang.String"/>
+  <collection name="with" referenced-type="BioEntity"/>
+  <collection name="evidenceCodes" referenced-type="ECOTerm"/>
+</class>
+<class name="DiseaseEvidenceCode" extends="OntologyAnnotationEvidenceCode" is-interface="true">
+  <attribute name="inferredFrom" type="java.lang.String"/>
+</class>
+<class name="ECOTerm" extends="OntologyTerm" is-interface="true" term="http://purl.obolibrary.org/obo/eco.owl">
+</class>
+<class name="Variant" extends="SequenceCollection SequenceFeature" is-interface="true" term="http://purl.obolibrary.org/obo/SO:0001060">
+  <attribute name="variantType" type="java.lang.String"/>
+  <attribute name="variantSymbol" type="java.lang.String"/>
+  <attribute name="variantsTypeId" type="java.lang.String"/>
+  <attribute name="variantId" type="java.lang.String"/>
+  <attribute name="VariantsHgvsNames" type="java.lang.String"/>
+  <reference name="publication" referenced-type="Publication"/>
+  <reference name="affectedGene" referenced-type="Gene" reverse-reference="variants"/>
+  <reference name="allele" referenced-type="Allele" reverse-reference="variants"/>
+  <collection name="variantdetails" referenced-type="VariantDetails"/>
+  <collection name="consequences" referenced-type="VariantConsequence" reverse-reference="variant"/>
+</class>
+<class name="VariantConsequence" is-interface="true">
+  <attribute name="impact" type="java.lang.String"/>
+  <attribute name="aminoAcidChange" type="java.lang.String"/>
+  <attribute name="consequenceCode" type="java.lang.String"/>
+  <reference name="gene" referenced-type="Gene" reverse-reference="variantConsequences"/>
+  <reference name="variant" referenced-type="Variant" reverse-reference="consequences"/>
+  <reference name="transcript" referenced-type="Transcript" reverse-reference="variantConsequences"/>
+</class>
+<class name="VariantDetails" extends="SequenceCollection SequenceFeature" is-interface="true">
+  <attribute name="hasDiseaseAnnotations" type="java.lang.Boolean"/>
+  <attribute name="chrStartPosition" type="java.lang.Integer"/>
+  <attribute name="mostSevereConsequenceName" type="java.lang.String"/>
+  <attribute name="hasPhenotypeAnnotations" type="java.lang.Boolean"/>
+  <attribute name="sequenceOfReference" type="java.lang.String"/>
+  <attribute name="variantInformationReference" type="java.lang.String"/>
+  <attribute name="assembly" type="java.lang.String"/>
+  <attribute name="sequenceOfVariant" type="java.lang.String"/>
+  <attribute name="chrEndPosition" type="java.lang.Integer"/>
+  <attribute name="chr" type="java.lang.String"/>
+</class>
+<class name="Paralogue" is-interface="true" term="http://purl.obolibrary.org/obo/SO:0000858">
+  <attribute name="predictionMethodsNotMatched" type="java.lang.String"/>
+  <attribute name="predictionMethodsNotCalled" type="java.lang.String"/>
+  <attribute name="length" type="java.lang.Integer"/>
+  <attribute name="predictionMethodsMatched" type="java.lang.String"/>
+  <attribute name="similarity" type="java.lang.Integer"/>
+  <attribute name="identity" type="java.lang.Integer"/>
+  <attribute name="rank" type="java.lang.Integer"/>
+  <reference name="gene" referenced-type="Gene" reverse-reference="paralogues"/>
+  <reference name="paralogue" referenced-type="Gene"/>
+</class>
+<class name="Publication" is-interface="true">
+  <attribute name="citation" type="java.lang.String"/>
+  <attribute name="pubXrefId" type="java.lang.String"/>
+</class>
+<class name="Transcript" is-interface="true">
+  <collection name="variantConsequences" referenced-type="VariantConsequence" reverse-reference="transcript"/>
+</class>
+<class name="Homologue" is-interface="true">
+  <attribute name="source" type="java.lang.String"/>
+  <attribute name="isBestScore" type="java.lang.Boolean"/>
+  <attribute name="algorithms" type="java.lang.String"/>
+  <attribute name="algorithmsAttempted" type="java.lang.Integer"/>
+  <attribute name="algorithmsMatch" type="java.lang.Integer"/>
+  <attribute name="isBestReverseScore" type="java.lang.Boolean"/>
+</class>
+<class name="Gene" is-interface="true">
+  <attribute name="doDescription" type="java.lang.String"/>
+  <attribute name="goProcessDescription" type="java.lang.String"/>
+  <attribute name="autoDescription" type="java.lang.String"/>
+  <attribute name="expressionDescription" type="java.lang.String"/>
+  <attribute name="goComponentDescription" type="java.lang.String"/>
+  <attribute name="goDescription" type="java.lang.String"/>
+  <attribute name="orthologyDescription" type="java.lang.String"/>
+  <attribute name="goFunctionDescription" type="java.lang.String"/>
+  <collection name="variantConsequences" referenced-type="VariantConsequence" reverse-reference="gene"/>
+  <collection name="variants" referenced-type="Variant" reverse-reference="affectedGene"/>
+  <collection name="experimentalDiseaseAnnotations" referenced-type="DiseaseAnnotation" reverse-reference="experimentalGene"/>
+  <collection name="paralogues" referenced-type="Paralogue" reverse-reference="gene"/>
+  <collection name="diseaseAnnotation" referenced-type="DiseaseAnnotation"/>
+</class>
+<class name="InteractionDetail" is-interface="true">
+  <attribute name="role1Name" type="java.lang.String"/>
+  <attribute name="phenotypesOrTraits" type="java.lang.String"/>
+  <attribute name="shortName" type="java.lang.String"/>
+  <attribute name="role2Name" type="java.lang.String"/>
+  <reference name="participant2Type" referenced-type="InteractionTerm"/>
+  <reference name="participant1Type" referenced-type="InteractionTerm"/>
+</class>
+<class name="Interaction" is-interface="true">
+  <attribute name="relation" type="java.lang.String"/>
+  <attribute name="aggregationDatabase" type="java.lang.String"/>
+  <reference name="detectionMethod" referenced-type="InteractionTerm"/>
+  <reference name="interactionSource" referenced-type="InteractionTerm"/>
+</class>
+<class name="Allele" is-interface="true">
+  <attribute name="alleleSymbol" type="java.lang.String"/>
+  <collection name="variants" referenced-type="Variant" reverse-reference="allele"/>
+  <collection name="diseaseAnnotations" referenced-type="DiseaseAnnotation" reverse-reference="alleleSubject"/>
+</class>
+</classes>
